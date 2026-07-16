@@ -1,0 +1,22 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Bot users",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "integer" },
+        "username": { "type": "string" },
+        "full_name": { "type": "string" },
+        "last_active": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "full_name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of bot users"
+    }
+  }
+}

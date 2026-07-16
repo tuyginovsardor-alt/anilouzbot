@@ -1,38 +1,51 @@
-import asyncpg
+import firebase_admin
+from firebase_admin import credentials, firestore
 from bot.config import config
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
-        self.pool = None
+        self.db = None
 
-    async def connect(self):
-        if not self.pool:
-            self.pool = await asyncpg.create_pool(config.DATABASE_URL)
+    def connect(self):
+        try:
+            # Initialize firebase if not already initialized
+            if not firebase_admin._apps:
+                # Use default credentials in AI Studio/Vercel
+                firebase_admin.initialize_app()
+            
+            self.db = firestore.client()
+            logger.info("Firebase Admin initialized successfully.")
+        except Exception as e:
+            logger.error(f"Error initializing Firebase: {e}")
 
-    async def disconnect(self):
-        if self.pool:
-            await self.pool.close()
+    def disconnect(self):
+        # firebase-admin doesn't strictly need a disconnect call like a pool
+        pass
 
     async def add_user(self, user_id: int, username: str, full_name: str):
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                """
-                INSERT INTO users (user_id, username, full_name)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (user_id) DO UPDATE 
-                SET username = $2, full_name = $3
-                """,
-                user_id, username, full_name
-            )
+        # Firestore is synchronous in firebase-admin (mostly), 
+        # but we keep it async for consistency in the bot logic.
+        user_ref = self.db.collection('users').document(str(user_id))
+        user_ref.set({
+            'user_id': user_id,
+            'username': username,
+            'full_name': full_name,
+            'last_active': firestore.SERVER_TIMESTAMP
+        }, merge=True)
 
     async def get_stats(self):
-        async with self.pool.acquire() as conn:
-            user_count = await conn.fetchval("SELECT COUNT(*) FROM users")
-            return {"user_count": user_count}
+        users_ref = self.db.collection('users')
+        # Note: In production with many users, use a counter or aggregation query
+        docs = users_ref.stream()
+        count = sum(1 for _ in docs)
+        return {"user_count": count}
 
     async def get_all_users(self):
-        async with self.pool.acquire() as conn:
-            rows = await conn.fetch("SELECT user_id FROM users")
-            return [row['user_id'] for row in rows]
+        users_ref = self.db.collection('users')
+        docs = users_ref.stream()
+        return [int(doc.id) for doc in docs]
 
 db = Database()

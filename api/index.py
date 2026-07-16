@@ -27,14 +27,10 @@ app = FastAPI()
 async def on_startup():
     logger.info("Starting up Anilo Uz Bot...")
     try:
-        # Check if DB URL is valid and not a placeholder
-        if config.DATABASE_URL and "user:password" not in config.DATABASE_URL:
-            await db.connect()
-            logger.info("Database connected successfully.")
-        else:
-            logger.warning("DATABASE_URL is not configured properly. DB features disabled.")
+        # Initialize Firebase
+        db.connect()
     except Exception as e:
-        logger.error(f"Database connection error: {e}")
+        logger.error(f"Firebase initialization error: {e}")
     
     # Set webhook if configuration is complete
     try:
