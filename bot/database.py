@@ -15,6 +15,10 @@ class Database:
     def db(self):
         if self._db is None:
             self.connect()
+        if self._db is None:
+            # We don't raise here but we log. The methods using self.db will fail if it's None.
+            # Actually, raising here is better to avoid AttributeError later.
+            raise Exception("Firestore database not initialized. Please check your credentials and ensure the database exists in Firebase Console.")
         return self._db
 
     def connect(self):
