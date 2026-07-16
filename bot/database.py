@@ -14,11 +14,10 @@ class Database:
     @property
     def db(self):
         if self._db is None:
-            self.connect()
-        if self._db is None:
-            # We don't raise here but we log. The methods using self.db will fail if it's None.
-            # Actually, raising here is better to avoid AttributeError later.
-            raise Exception("Firestore database not initialized. Please check your credentials and ensure the database exists in Firebase Console.")
+            try:
+                self.connect()
+            except:
+                pass
         return self._db
 
     def connect(self):
@@ -50,38 +49,47 @@ class Database:
                 logger.info("Firestore client connected to (default) database.")
         except Exception as e:
             logger.error(f"Error initializing Firebase: {e}")
-            # Don't raise here, so the app doesn't crash on start if DB is not critical
-            # But subsequent DB calls will fail gracefully
+            self._db = None
 
     def disconnect(self):
         pass
 
     async def add_user(self, user_id: int, username: str, full_name: str):
         if not self.db:
-            logger.error("Cannot add user: Firestore not initialized.")
             return
         
-        user_ref = self.db.collection('users').document(str(user_id))
-        user_ref.set({
-            'user_id': user_id,
-            'username': username,
-            'full_name': full_name,
-            'last_active': firestore.SERVER_TIMESTAMP
-        }, merge=True)
+        try:
+            user_ref = self.db.collection('users').document(str(user_id))
+            user_ref.set({
+                'user_id': user_id,
+                'username': username,
+                'full_name': full_name,
+                'last_active': firestore.SERVER_TIMESTAMP
+            }, merge=True)
+        except Exception as e:
+            logger.error(f"Firestore error in add_user: {e}")
 
     async def get_stats(self):
         if not self.db:
             return {"user_count": 0, "error": "DB not connected"}
         
-        docs = self.db.collection('users').stream()
-        count = sum(1 for _ in docs)
-        return {"user_count": count}
+        try:
+            docs = self.db.collection('users').stream()
+            count = sum(1 for _ in docs)
+            return {"user_count": count}
+        except Exception as e:
+            logger.error(f"Firestore error in get_stats: {e}")
+            return {"user_count": 0, "error": str(e)}
 
     async def get_all_users(self):
         if not self.db:
             return []
         
-        docs = self.db.collection('users').stream()
-        return [int(doc.id) for doc in docs]
+        try:
+            docs = self.db.collection('users').stream()
+            return [int(doc.id) for doc in docs]
+        except Exception as e:
+            logger.error(f"Firestore error in get_all_users: {e}")
+            return []
 
 db = Database()

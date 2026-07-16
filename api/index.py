@@ -64,15 +64,22 @@ async def on_shutdown():
 async def index():
     webhook_info = await bot.get_webhook_info()
     db_status = "Connected"
+    db_details = {}
     try:
-        db.db # Trigger connection
+        # Check connection and get some info
+        if db.db:
+            db_details = {
+                "project_id": db.db._project,
+                "database_id": db.db._database_string.split('/')[-1] if hasattr(db.db, '_database_string') else "(default)"
+            }
     except Exception as e:
         db_status = f"Error: {str(e)}"
         
     return {
         "status": "Anilo Uz Bot is running",
         "admin": config.ADMIN_ID,
-        "database": db_status,
+        "database_status": db_status,
+        "database_details": db_details,
         "webhook_set": bool(webhook_info.url),
         "webhook_url": webhook_info.url
     }

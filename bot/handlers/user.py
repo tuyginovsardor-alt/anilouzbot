@@ -2,6 +2,9 @@ from aiogram import Router, types, F
 from aiogram.filters import CommandStart
 from bot.database import db
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -18,7 +21,10 @@ def get_user_main_kb():
 @router.message(CommandStart())
 async def start_cmd(message: types.Message):
     user = message.from_user
-    await db.add_user(user.id, user.username, user.full_name)
+    try:
+        await db.add_user(user.id, user.username, user.full_name)
+    except Exception as e:
+        logger.error(f"Failed to record user in DB: {e}")
     
     welcome_text = (
         f"👋 Salom, <b>{user.full_name}</b>!\n\n"
