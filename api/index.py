@@ -46,7 +46,7 @@ async def on_shutdown():
 
 @app.get("/")
 async def index():
-    return {"status": "Wentric Bot is running", "admin": config.ADMIN_ID}
+    return {"status": "Anilo Uz Bot is running", "admin": config.ADMIN_ID}
 
 @app.post("/webhook")
 async def webhook(request: Request):

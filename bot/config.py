@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     ADMIN_ID: int
     DATABASE_URL: str
-    WEBHOOK_SECRET: str = "wentric_secret"
+    WEBHOOK_SECRET: str = "anilo_uz_secret"
     APP_URL: str = ""
     
     # Chunk size for broadcast
