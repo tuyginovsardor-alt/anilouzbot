@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     WEBHOOK_SECRET: str = "anilo_uz_secret"
     APP_URL: str = ""
     
+    # Supabase settings
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    
     # Chunk size for broadcast
     BROADCAST_CHUNK_SIZE: int = 20
 

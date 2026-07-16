@@ -1,125 +1,105 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
+from supabase import create_client, Client
 from bot.config import config
 import logging
-import os
-import json
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
-        self._db = None
+        self._client: Client = None
 
     @property
-    def db(self):
-        if self._db is None:
-            try:
-                self.connect()
-            except:
-                pass
-        return self._db
+    def client(self) -> Client:
+        if self._client is None:
+            self.connect()
+        return self._client
 
     def connect(self):
         try:
-            if not firebase_admin._apps:
-                # Try to load from environment variable (for Vercel)
-                sa_info = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
-                if sa_info:
-                    try:
-                        cert_dict = json.loads(sa_info)
-                        cred = credentials.Certificate(cert_dict)
-                        firebase_admin.initialize_app(cred)
-                        logger.info("Firebase initialized using FIREBASE_SERVICE_ACCOUNT.")
-                    except Exception as je:
-                        logger.error(f"Failed to parse FIREBASE_SERVICE_ACCOUNT JSON: {je}")
-                        firebase_admin.initialize_app()
-                else:
-                    # Fallback to default credentials (for local or GCP)
-                    firebase_admin.initialize_app()
-                    logger.info("Firebase initialized using Default Credentials.")
-            
-            # Use custom database ID if provided
-            db_id = os.environ.get('FIREBASE_DATABASE_ID')
-            if db_id:
-                self._db = firestore.client(database=db_id)
-                logger.info(f"Firestore client connected to database: {db_id}")
+            if config.SUPABASE_URL and config.SUPABASE_KEY:
+                self._client = create_client(config.SUPABASE_URL, config.SUPABASE_KEY)
+                logger.info("Supabase client initialized successfully.")
             else:
-                self._db = firestore.client()
-                logger.info("Firestore client connected to (default) database.")
+                logger.warning("Supabase credentials missing in config.")
         except Exception as e:
-            logger.error(f"Error initializing Firebase: {e}")
-            self._db = None
+            logger.error(f"Error initializing Supabase: {e}")
+            self._client = None
 
     def disconnect(self):
         pass
 
     async def add_user(self, user_id: int, username: str, full_name: str):
-        if not self.db:
+        if not self.client:
             return
         
         try:
-            user_ref = self.db.collection('users').document(str(user_id))
-            user_ref.set({
+            # Check if user exists to avoid overwriting joined_at if we were to send it
+            # But upsert with on_conflict is cleaner. 
+            # We only send fields that should be updated or set on first time.
+            data = {
                 'telegram_id': user_id,
                 'username': username,
                 'full_name': full_name,
-                'joined_at': firestore.SERVER_TIMESTAMP,
-                'is_blocked': False,
-                'last_active': firestore.SERVER_TIMESTAMP
-            }, merge=True)
+                'is_blocked': False
+            }
+            # Supabase upsert will handle the rest. 
+            # If 'joined_at' has a default in DB, it will be set on insert.
+            self.client.table('users').upsert(data, on_conflict='telegram_id').execute()
         except Exception as e:
-            logger.error(f"Firestore error in add_user: {e}")
+            logger.error(f"Supabase error in add_user: {e}")
 
     async def get_stats(self):
-        if not self.db:
+        if not self.client:
             return {"user_count": 0, "error": "DB not connected"}
         
         try:
-            docs = self.db.collection('users').stream()
-            count = sum(1 for _ in docs)
-            return {"user_count": count}
+            # count() in supabase-py returns a response object
+            response = self.client.table('users').select("telegram_id", count="exact").execute()
+            count = len(response.data) if response.data else 0
+            # If we want exact count from header: response.count
+            return {"user_count": response.count if hasattr(response, 'count') else count}
         except Exception as e:
-            logger.error(f"Firestore error in get_stats: {e}")
+            logger.error(f"Supabase error in get_stats: {e}")
             return {"user_count": 0, "error": str(e)}
 
     async def add_movie(self, data: dict):
-        if not self.db:
-            logger.error("Cannot add movie: Firestore not initialized.")
+        if not self.client:
+            logger.error("Cannot add movie: Supabase not initialized.")
             return False
         
         try:
-            # Use title_uz as document ID (slugified or unique string) or auto ID
-            # For consistency, let's use auto ID but store the data
-            doc_ref = self.db.collection('movies').document()
-            data['created_at'] = firestore.SERVER_TIMESTAMP
-            doc_ref.set(data)
-            logger.info(f"Movie added to database: {data.get('title_uz')}")
+            self.client.table('movies').insert(data).execute()
+            logger.info(f"Movie added to Supabase: {data.get('title_uz')}")
             return True
         except Exception as e:
-            logger.error(f"Firestore error in add_movie: {e}")
+            logger.error(f"Supabase error in add_movie: {e}")
             return False
 
     async def get_latest_movies(self, limit: int = 10):
-        if not self.db:
+        if not self.client:
             return []
         
         try:
-            docs = self.db.collection('movies').order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit).stream()
-            return [doc.to_dict() for doc in docs]
+            response = self.client.table('movies')\
+                .select("*")\
+                .order('id', desc=True)\
+                .limit(limit)\
+                .execute()
+            return response.data if response.data else []
         except Exception as e:
-            logger.error(f"Firestore error in get_latest_movies: {e}")
+            logger.error(f"Supabase error in get_latest_movies: {e}")
             return []
 
     async def get_all_users(self):
-        if not self.db:
+        if not self.client:
             return []
         
         try:
-            docs = self.db.collection('users').stream()
-            return [int(doc.id) for doc in docs]
+            response = self.client.table('users').select("telegram_id").execute()
+            return [int(row['telegram_id']) for row in response.data] if response.data else []
         except Exception as e:
-            logger.error(f"Firestore error in get_all_users: {e}")
+            logger.error(f"Supabase error in get_all_users: {e}")
             return []
 
 db = Database()

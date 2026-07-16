@@ -34,10 +34,10 @@ app = FastAPI()
 async def on_startup():
     logger.info("Starting up Anilo Uz Bot...")
     try:
-        # Initialize Firebase
+        # Initialize Database (Supabase)
         db.connect()
     except Exception as e:
-        logger.error(f"Firebase initialization error: {e}")
+        logger.error(f"Database initialization error: {e}")
     
     # Set webhook if configuration is complete
     try:
@@ -66,11 +66,11 @@ async def index():
     db_status = "Connected"
     db_details = {}
     try:
-        # Check connection and get some info
-        if db.db:
+        # Check connection
+        if db.client:
             db_details = {
-                "project_id": db.db._project,
-                "database_id": db.db._database_string.split('/')[-1] if hasattr(db.db, '_database_string') else "(default)"
+                "engine": "Supabase (PostgreSQL)",
+                "url": config.SUPABASE_URL
             }
     except Exception as e:
         db_status = f"Error: {str(e)}"
