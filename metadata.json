@@ -1,0 +1,6 @@
+{
+  "name": "Anilo Uz",
+  "description": "High-performance Telegram Anime Bot with advanced Admin Panel and PostgreSQL integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
