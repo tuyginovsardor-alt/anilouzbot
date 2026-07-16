@@ -48,23 +48,28 @@ async def show_latest(callback: types.CallbackQuery):
     
     for movie in movies:
         text = (
-            f"🎬 <b>{movie.get('title_uz')}</b>\n"
+            f"🎬 <b>{movie.get('title')}</b>\n"
             f"⭐️ Reyting: {movie.get('rating')}\n"
             f"📅 Yil: {movie.get('year')}\n"
             f"🎭 Janr: {movie.get('genre')}\n\n"
-            f"📝 {movie.get('description_uz')[:200]}..."
+            f"📝 {movie.get('plot', '')[:200]}..."
         )
         
         kb = InlineKeyboardBuilder()
-        kb.row(types.InlineKeyboardButton(text="🌐 Saytda ko'rish", url=movie.get('site_url', 'https://anilo.uz')))
+        movie_id = movie.get('id')
+        url = f"https://anilo.uz/movie/{movie_id}" if movie_id else "https://anilo.uz"
+        kb.row(types.InlineKeyboardButton(text="🌐 Saytda ko'rish", url=url))
         
         if movie.get('poster_url'):
-            await callback.message.answer_photo(
-                photo=movie.get('poster_url'),
-                caption=text,
-                reply_markup=kb.as_markup(),
-                parse_mode="HTML"
-            )
+            try:
+                await callback.message.answer_photo(
+                    photo=movie.get('poster_url'),
+                    caption=text,
+                    reply_markup=kb.as_markup(),
+                    parse_mode="HTML"
+                )
+            except:
+                await callback.message.answer(text, reply_markup=kb.as_markup(), parse_mode="HTML")
         else:
             await callback.message.answer(text, reply_markup=kb.as_markup(), parse_mode="HTML")
 

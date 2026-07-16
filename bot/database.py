@@ -63,18 +63,36 @@ class Database:
             logger.error(f"Supabase error in get_stats: {e}")
             return {"user_count": 0, "error": str(e)}
 
-    async def add_movie(self, data: dict):
+    async def add_movie(self, data: dict, episodes: list = None):
         if not self.client:
             logger.error("Cannot add movie: Supabase not initialized.")
-            return False
+            return None
         
         try:
-            self.client.table('movies').insert(data).execute()
-            logger.info(f"Movie added to Supabase: {data.get('title_uz')}")
-            return True
+            # Insert movie
+            response = self.client.table('movies').insert(data).execute()
+            if not response.data:
+                return None
+            
+            movie_id = response.data[0]['id']
+            logger.info(f"Movie added to Supabase: {data.get('title')} (ID: {movie_id})")
+            
+            # If series and has episodes, insert them
+            if data.get('is_series') and episodes:
+                episodes_data = []
+                for ep in episodes:
+                    episodes_data.append({
+                        'movie_id': movie_id,
+                        'title': ep.get('title'),
+                        'source': ep.get('source')
+                    })
+                self.client.table('episodes').insert(episodes_data).execute()
+                logger.info(f"Added {len(episodes_data)} episodes for movie {movie_id}")
+                
+            return movie_id
         except Exception as e:
             logger.error(f"Supabase error in add_movie: {e}")
-            return False
+            return None
 
     async def get_latest_movies(self, limit: int = 10):
         if not self.client:
