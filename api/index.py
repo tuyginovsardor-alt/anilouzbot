@@ -25,18 +25,31 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def on_startup():
-    logger.info("Starting up...")
-    await db.connect()
+    logger.info("Starting up Anilo Uz Bot...")
+    try:
+        # Check if DB URL is valid and not a placeholder
+        if config.DATABASE_URL and "user:password" not in config.DATABASE_URL:
+            await db.connect()
+            logger.info("Database connected successfully.")
+        else:
+            logger.warning("DATABASE_URL is not configured properly. DB features disabled.")
+    except Exception as e:
+        logger.error(f"Database connection error: {e}")
     
-    # Set webhook if APP_URL is provided
-    if config.APP_URL:
-        webhook_url = f"{config.APP_URL}/webhook"
-        await bot.set_webhook(
-            url=webhook_url,
-            secret_token=config.WEBHOOK_SECRET,
-            drop_pending_updates=True
-        )
-        logger.info(f"Webhook set to: {webhook_url}")
+    # Set webhook if configuration is complete
+    try:
+        if config.APP_URL and config.BOT_TOKEN:
+            webhook_url = f"{config.APP_URL}/webhook"
+            await bot.set_webhook(
+                url=webhook_url,
+                secret_token=config.WEBHOOK_SECRET,
+                drop_pending_updates=True
+            )
+            logger.info(f"Webhook set successfully to: {webhook_url}")
+        else:
+            logger.warning("BOT_TOKEN or APP_URL missing. Webhook not set.")
+    except Exception as e:
+        logger.error(f"Webhook setup error: {e}")
 
 @app.on_event("shutdown")
 async def on_shutdown():

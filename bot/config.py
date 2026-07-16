@@ -3,9 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
 class Settings(BaseSettings):
-    BOT_TOKEN: str
-    ADMIN_ID: int
-    DATABASE_URL: str
+    BOT_TOKEN: str = ""
+    ADMIN_ID: int = 0
+    DATABASE_URL: str = ""
     WEBHOOK_SECRET: str = "anilo_uz_secret"
     APP_URL: str = ""
     
