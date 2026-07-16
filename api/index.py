@@ -55,7 +55,26 @@ async def on_shutdown():
 
 @app.get("/")
 async def index():
-    return {"status": "Anilo Uz Bot is running", "admin": config.ADMIN_ID}
+    webhook_info = await bot.get_webhook_info()
+    return {
+        "status": "Anilo Uz Bot is running",
+        "admin": config.ADMIN_ID,
+        "webhook_set": bool(webhook_info.url),
+        "webhook_url": webhook_info.url
+    }
+
+@app.get("/setup-webhook")
+async def setup_webhook():
+    if not config.APP_URL or not config.BOT_TOKEN:
+        return {"ok": False, "error": "APP_URL or BOT_TOKEN not set in environment variables"}
+    
+    webhook_url = f"{config.APP_URL}/webhook"
+    await bot.set_webhook(
+        url=webhook_url,
+        secret_token=config.WEBHOOK_SECRET,
+        drop_pending_updates=True
+    )
+    return {"ok": True, "message": f"Webhook set to {webhook_url}"}
 
 @app.post("/webhook")
 async def webhook(request: Request):
