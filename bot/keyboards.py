@@ -7,6 +7,9 @@ def get_admin_main_keyboard():
             InlineKeyboardButton(text="📢 Reklama", callback_data="admin_broadcast")
         ],
         [
+            InlineKeyboardButton(text="🎬 Kino Qo'shish", callback_data="admin_add_movie")
+        ],
+        [
             InlineKeyboardButton(text="⚙️ Sozlamalar", callback_data="admin_settings"),
             InlineKeyboardButton(text="🔌 API & Storage", callback_data="admin_storage")
         ],

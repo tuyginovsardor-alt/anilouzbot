@@ -61,9 +61,11 @@ class Database:
         try:
             user_ref = self.db.collection('users').document(str(user_id))
             user_ref.set({
-                'user_id': user_id,
+                'telegram_id': user_id,
                 'username': username,
                 'full_name': full_name,
+                'joined_at': firestore.SERVER_TIMESTAMP,
+                'is_blocked': False,
                 'last_active': firestore.SERVER_TIMESTAMP
             }, merge=True)
         except Exception as e:
@@ -80,6 +82,34 @@ class Database:
         except Exception as e:
             logger.error(f"Firestore error in get_stats: {e}")
             return {"user_count": 0, "error": str(e)}
+
+    async def add_movie(self, data: dict):
+        if not self.db:
+            logger.error("Cannot add movie: Firestore not initialized.")
+            return False
+        
+        try:
+            # Use title_uz as document ID (slugified or unique string) or auto ID
+            # For consistency, let's use auto ID but store the data
+            doc_ref = self.db.collection('movies').document()
+            data['created_at'] = firestore.SERVER_TIMESTAMP
+            doc_ref.set(data)
+            logger.info(f"Movie added to database: {data.get('title_uz')}")
+            return True
+        except Exception as e:
+            logger.error(f"Firestore error in add_movie: {e}")
+            return False
+
+    async def get_latest_movies(self, limit: int = 10):
+        if not self.db:
+            return []
+        
+        try:
+            docs = self.db.collection('movies').order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit).stream()
+            return [doc.to_dict() for doc in docs]
+        except Exception as e:
+            logger.error(f"Firestore error in get_latest_movies: {e}")
+            return []
 
     async def get_all_users(self):
         if not self.db:

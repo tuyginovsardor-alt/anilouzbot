@@ -37,6 +37,39 @@ async def start_cmd(message: types.Message):
     )
     await message.answer(welcome_text, reply_markup=get_user_main_kb(), parse_mode="HTML")
 
+@router.callback_query(F.data == "latest_anime")
+async def show_latest(callback: types.CallbackQuery):
+    movies = await db.get_latest_movies(5)
+    if not movies:
+        await callback.answer("Hozircha kinolar mavjud emas.")
+        return
+
+    await callback.message.delete()
+    
+    for movie in movies:
+        text = (
+            f"🎬 <b>{movie.get('title_uz')}</b>\n"
+            f"⭐️ Reyting: {movie.get('rating')}\n"
+            f"📅 Yil: {movie.get('year')}\n"
+            f"🎭 Janr: {movie.get('genre')}\n\n"
+            f"📝 {movie.get('description_uz')[:200]}..."
+        )
+        
+        kb = InlineKeyboardBuilder()
+        kb.row(types.InlineKeyboardButton(text="🌐 Saytda ko'rish", url=movie.get('site_url', 'https://anilo.uz')))
+        
+        if movie.get('poster_url'):
+            await callback.message.answer_photo(
+                photo=movie.get('poster_url'),
+                caption=text,
+                reply_markup=kb.as_markup(),
+                parse_mode="HTML"
+            )
+        else:
+            await callback.message.answer(text, reply_markup=kb.as_markup(), parse_mode="HTML")
+
+    await callback.message.answer("Asosiy menyuga qaytish:", reply_markup=get_user_main_kb())
+
 @router.callback_query(F.data == "about_us")
 async def about_us(callback: types.CallbackQuery):
     text = (
