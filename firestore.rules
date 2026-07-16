@@ -1,13 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
     
+    // Users collection rules
     match /users/{userId} {
+      // Allow user to read their own data (only if they are authenticated via Firebase Auth)
+      // Note: Since this is a Telegram bot using Admin SDK, 
+      // these rules only apply if you build a client-side app later.
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false; // Only admin SDK (bot) should write
+      
+      // Strict deny for all writes from public - only Admin SDK can write
+      allow write: if false;
     }
   }
 }

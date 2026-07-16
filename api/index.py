@@ -21,6 +21,13 @@ dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(user.router)
 dp.include_router(admin.router)
 
+# Ensure database is connected (lazy connection handled in Database class)
+# But we can trigger it here once
+try:
+    db.connect()
+except:
+    pass
+
 app = FastAPI()
 
 @app.on_event("startup")
