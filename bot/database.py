@@ -40,7 +40,14 @@ class Database:
                     firebase_admin.initialize_app()
                     logger.info("Firebase initialized using Default Credentials.")
             
-            self._db = firestore.client()
+            # Use custom database ID if provided
+            db_id = os.environ.get('FIREBASE_DATABASE_ID')
+            if db_id:
+                self._db = firestore.client(database=db_id)
+                logger.info(f"Firestore client connected to database: {db_id}")
+            else:
+                self._db = firestore.client()
+                logger.info("Firestore client connected to (default) database.")
         except Exception as e:
             logger.error(f"Error initializing Firebase: {e}")
             # Don't raise here, so the app doesn't crash on start if DB is not critical
